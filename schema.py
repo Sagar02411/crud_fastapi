@@ -8,8 +8,6 @@ class ProductBase(BaseModel):
     price: int
     description: str
     add_by: str
-    image_URL: str
-
 
 class ProductAdd(ProductBase):
     class Config:
@@ -28,7 +26,6 @@ class UpdateProduct(BaseModel):
     price: Optional[int]
     description: Optional[str]
     add_by: Optional[str]
-    image_URL: Optional[str]
 
 
     class Config:

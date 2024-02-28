@@ -50,4 +50,3 @@ verifier = BasicVerifier(
     backend=backend,
     auth_http_exception=HTTPException(status_code=403, detail="Invalid session"),
 )
-

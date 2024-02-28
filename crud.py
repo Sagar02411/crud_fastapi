@@ -34,6 +34,7 @@ def add_product_details_to_db(db: Session, product: schema.ProductAdd):
 
 
 def update_product_details(db: Session, name: str, details: schema.UpdateProduct):
+    print(details)
     db.query(model.Products).filter(model.Products.product_name == name).update(vars(details))
     db.commit()
     return db.query(model.Products).filter(model.Products.product_name == name).first()

@@ -9,14 +9,20 @@ from uuid import UUID
 import boto3
 import magic
 from loguru import logger
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi import FastAPI, Request, Form, Depends
+from fastapi.templating import Jinja2Templates
+from fastapi import Body
 
-
+templates = Jinja2Templates(directory="templates")
 
 import auth
 import crud
 import model
 import schema
 from db_handler import SessionLocal, engine
+from fastapi.responses import RedirectResponse
 
 model.Base.metadata.create_all(bind=engine)
 
@@ -114,6 +120,18 @@ def get_db():
 #     await s3_upload(contents=contents, key=file_name)
 #     return {'file_name': file_name}
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/add_product", response_class=HTMLResponse)
+async def redirect_to_add_product(request: Request):
+    return templates.TemplateResponse("add_product.html",  {"request": request})
+
+@app.get("/edit_product", response_class=HTMLResponse)
+async def redirect_to_add_product(request: Request):
+    return templates.TemplateResponse("edit_product.html",  {"request": request})
+
 
 @app.get('/product', response_model=List[schema.Product])
 def retrieve_all_products_details(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -121,14 +139,14 @@ def retrieve_all_products_details(skip: int = 0, limit: int = 100, db: Session =
     return products
 
 
-@app.post('/product', dependencies=[Depends(cookie)])
-def add_new_product(product_name: str, price: int, description: str, image_url:str, session_data: schema.SessionData = Depends(auth.verifier), db: Session = Depends(get_db)):
-    if not session_data.logged_in:
-        raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="You need to be logged in to access products",
-        )
-    elif not product_name or not price or not description:
+@app.post('/add_product_details')
+def add_new_product(product_name: str = Body(), price: int = Body(), description: str = Body(), db: Session = Depends(get_db)):
+    # if not session_data.logged_in:
+    #     raise HTTPException(
+    #             status_code=status.HTTP_401_UNAUTHORIZED,
+    #             detail="You need to be logged in to access products",
+    #     )
+    if not product_name or not price or not description:
         raise HTTPException(status_code=404, detail=f"missing values")
     elif price < 0:
         raise HTTPException(status_code=404, detail=f"price can not less than zero!!!")
@@ -136,14 +154,13 @@ def add_new_product(product_name: str, price: int, description: str, image_url:s
         product_name=product_name,
         price=price,
         description=description,
-        add_by=session_data.username,
-        image_URL=image_url
+        add_by="test",
     )
+    print(mv_details)
     db.add(mv_details)
     db.commit()
     db.refresh(mv_details)
-    return f"{product_name} added by {session_data.username}"
-
+    return f"{product_name} added successfuly"
 
 @app.delete('/product')
 def delete_product_by_name(name: str, db: Session = Depends(get_db)):
@@ -158,8 +175,9 @@ def delete_product_by_name(name: str, db: Session = Depends(get_db)):
     return {"delete status": "success"}
 
 
-@app.put('/product', response_model=schema.Product)
-def update_product_details(name: str, update_param: schema.UpdateProduct, db: Session = Depends(get_db)):
+@app.put('/edit_product_details', response_model=schema.Product)
+def update_product_details(update_param: schema.UpdateProduct, name: str, db: Session = Depends(get_db)):
+    # import pdb; pdb.set_trace()
     details = crud.get_product_by_name(db=db, name=name)
     if not details:
         raise HTTPException(status_code=404, detail=f"No record found to update")
